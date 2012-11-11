@@ -22,14 +22,6 @@ public class N4WallpaperService extends WallpaperService {
 	}
 
 	private class N4WallpaperEngine extends Engine implements SensorEventListener {
-//		private boolean mVisible = false;
-//		private final Handler mHandler = new Handler();
-//		private final Runnable mUpdateDisplay = new Runnable() {
-//			@Override
-//			public void run() {
-//				draw();
-//			}
-//		};
 
 		private final SensorManager mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
 		private final Sensor mRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -44,13 +36,11 @@ public class N4WallpaperService extends WallpaperService {
 		
 		@Override
 		public void onVisibilityChanged(boolean visible) {
-//			mVisible = visible;
 			if (visible) {
 				mSensorManager.registerListener(this, mRotation, SensorManager.SENSOR_DELAY_NORMAL);
 				draw();
 			} else {
 				mSensorManager.unregisterListener(this);
-//				mHandler.removeCallbacks(mUpdateDisplay);
 			}
 		}
 
@@ -62,16 +52,12 @@ public class N4WallpaperService extends WallpaperService {
 		@Override
 		public void onSurfaceDestroyed(SurfaceHolder holder) {
 			super.onSurfaceDestroyed(holder);
-//			mVisible = false;
-//			mHandler.removeCallbacks(mUpdateDisplay);
 		}
 
 		@Override
 		public void onDestroy() {
 			super.onDestroy();
-//			mVisible = false;
 			mSensorManager.unregisterListener(this);
-//			mHandler.removeCallbacks(mUpdateDisplay);
 		}
 
 		private void draw() {
@@ -97,7 +83,6 @@ public class N4WallpaperService extends WallpaperService {
 					for(int ii = 0; ii*2*r < wMax; ii++) {
 						for(int jj = 0; jj*2*r < hMax; jj++) {
 							p.setAlpha((int) ((intensity*n)%255)/2);
-//							c.drawCircle(ii*2*r, jj*2*r, r-2, p);
 							c.drawBitmap(dots[(int) (n%Array.getLength(dots))], ii*2*r, jj*2*r, p);
 							// Numerical Recipes LCG
 							n = (1664525L*n + 1013904223L) % 4294967296L;
@@ -108,10 +93,6 @@ public class N4WallpaperService extends WallpaperService {
 				if (c != null)
 					holder.unlockCanvasAndPost(c);
 			}
-//			mHandler.removeCallbacks(mUpdateDisplay);
-//			if (mVisible) {
-//				mHandler.postDelayed(mUpdateDisplay, 100);
-//			}
 		}
 
 		@Override
