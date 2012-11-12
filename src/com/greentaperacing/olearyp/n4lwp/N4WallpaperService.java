@@ -27,7 +27,10 @@ public class N4WallpaperService extends WallpaperService {
 
 		private final SensorManager mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
 		private final Sensor mRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+		private final Sensor mLight = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+		private final float illumMax = 700f;
 		private float[] rotation = {0.0f, 0.0f, 0.0f};
+		private float illum = illumMax;
 		
 		private final Random rng = new Random(0);
 		
@@ -42,6 +45,9 @@ public class N4WallpaperService extends WallpaperService {
 		public void onVisibilityChanged(boolean visible) {
 			if (visible) {
 				mSensorManager.registerListener(this, mRotation, SensorManager.SENSOR_DELAY_NORMAL);
+				if(mLight != null) {
+					mSensorManager.registerListener(this, mLight, SensorManager.SENSOR_DELAY_NORMAL);
+				}
 				draw();
 			} else {
 				mSensorManager.unregisterListener(this);
@@ -96,9 +102,14 @@ public class N4WallpaperService extends WallpaperService {
 					// Compute psi for each dot rotation
 					double[] psi_rotations = {psi-Math.PI/5.0, psi-2.0*Math.PI/5.0, psi-3.0*Math.PI/5.0, psi-4.0*Math.PI/5.0};
 					
+					float illum_adj = 1.0f;
+					if(illum < illumMax) {
+						illum_adj = (illum + 100)/(illumMax + 100);
+					} 
+					
 					int[] intensity = new int[4];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi_rotations[ii])));
+						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi_rotations[ii])) * illum_adj + 5);
 					}
 					
 					c.drawColor(Color.BLACK);
@@ -131,8 +142,12 @@ public class N4WallpaperService extends WallpaperService {
 
 		@Override
 		public void onSensorChanged(SensorEvent event) {
-			rotation  = event.values;
-			draw();
+			if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
+				rotation  = event.values;
+				draw();
+			} else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
+				illum = event.values[0];
+			}
 		}
 	}
 
