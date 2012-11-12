@@ -28,7 +28,6 @@ package com.greentaperacing.olearyp.n4lwp;
 import java.util.Random;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -59,13 +58,18 @@ public class N4WallpaperService extends WallpaperService {
 		
 		private final Random rng = new Random(0);
 		
-		private final Bitmap[] dots = {
-				BitmapFactory.decodeResource(getResources(),R.drawable.dot1),
-				BitmapFactory.decodeResource(getResources(),R.drawable.dot2),
-				BitmapFactory.decodeResource(getResources(),R.drawable.dot3),
-				BitmapFactory.decodeResource(getResources(),R.drawable.dot4),
-		};
+		private final float[] dotAngles = new float[20];
+		private final Bitmap[] dots = new Bitmap[dotAngles.length];
 		
+		@Override
+		public void onCreate(SurfaceHolder surfaceHolder) {
+			super.onCreate(surfaceHolder);
+			for(int ii = 0; ii < dotAngles.length; ii++) {
+				dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
+				dots[ii] = makeDot(16, 14, dotAngles[ii]);
+			}
+		}
+
 		@Override
 		public void onVisibilityChanged(boolean visible) {
 			if (visible) {
@@ -124,17 +128,14 @@ public class N4WallpaperService extends WallpaperService {
 					// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
 					double psi = Math.acos((u_w[0]*proj_wu_w[0] + u_w[1]*proj_wu_w[1] + u_w[2]*proj_wu_w[2])/norm(proj_wu_w));
 					
-					// Compute psi for each dot rotation
-					double[] psi_rotations = {psi-Math.PI/5.0, psi-2.0*Math.PI/5.0, psi-3.0*Math.PI/5.0, psi-4.0*Math.PI/5.0};
-					
 					float illum_adj = 1.0f;
 					if(illum < illumMax) {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					} 
 					
-					int[] intensity = new int[4];
+					int[] intensity = new int[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi_rotations[ii])) * illum_adj + 5);
+						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi + dotAngles[ii] + Math.PI/2)) * illum_adj + 5);
 					}
 					
 					c.drawColor(Color.BLACK);
@@ -174,10 +175,39 @@ public class N4WallpaperService extends WallpaperService {
 				illum = event.values[0];
 			}
 		}
+
+		public float norm(float[] vector) {
+			return FloatMath.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
+					+ vector[2] * vector[2]);
+		}
+
+		public Bitmap makeDot(int gridSize, int dotSize, float angle) {
+			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
+			Canvas c = new Canvas(b);
+			Paint p = new Paint();
+			p.setColor(Color.WHITE);
+			p.setAntiAlias(true);
+			
+			c.drawCircle(gridSize/2.0f, gridSize/2.0f, dotSize/2.0f, p);
+			
+			p.setColor(Color.BLACK);
+			p.setStrokeWidth(dotSize/8);
+			
+			android.graphics.Matrix R_if = new android.graphics.Matrix();
+			R_if.setRotate(angle*180f/(float) Math.PI, gridSize/2.0f, gridSize/2.0f);
+			float[] lineEnds = {
+					gridSize/2.0f, 0,
+					gridSize/2.0f, gridSize,
+					gridSize/4.0f, 0,
+					gridSize/4.0f, gridSize,
+					3.0f*gridSize/4.0f, 0,
+					3.0f*gridSize/4.0f, gridSize,
+			};
+			R_if.mapPoints(lineEnds);
+			c.drawLines(lineEnds, p);
+						
+			return b;
+		}
 	}
 
-	public static float norm(float[] vector) {
-		return FloatMath.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
-				+ vector[2] * vector[2]);
-	}
 }
