@@ -1,6 +1,5 @@
 package com.greentaperacing.olearyp.n4lwp;
 
-import java.lang.reflect.Array;
 import java.util.Random;
 
 import android.graphics.Bitmap;
@@ -29,6 +28,8 @@ public class N4WallpaperService extends WallpaperService {
 		private final SensorManager mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
 		private final Sensor mRotation = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 		private float[] rotation = {0.0f, 0.0f, 0.0f};
+		
+		private final Random rng = new Random(0);
 		
 		private final Bitmap[] dots = {
 				BitmapFactory.decodeResource(getResources(),R.drawable.dot1),
@@ -92,11 +93,12 @@ public class N4WallpaperService extends WallpaperService {
 					// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
 					double psi = Math.acos((u_w[0]*proj_wu_w[0] + u_w[1]*proj_wu_w[1] + u_w[2]*proj_wu_w[2])/norm(proj_wu_w));
 					
+					// Compute psi for each dot rotation
 					double[] psi_rotations = {psi-Math.PI/5.0, psi-2.0*Math.PI/5.0, psi-3.0*Math.PI/5.0, psi-4.0*Math.PI/5.0};
 					
 					int[] intensity = new int[4];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(255*Math.sin(theta/2.0) * Math.sin(psi_rotations[ii]));
+						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi_rotations[ii])));
 					}
 					
 					c.drawColor(Color.BLACK);
@@ -107,7 +109,7 @@ public class N4WallpaperService extends WallpaperService {
 					int hMax = c.getHeight();
 					int wMax = c.getWidth();
 					int r = 10;
-					Random rng = new Random(0);
+					rng.setSeed(0);
 					for(int ii = 0; ii*2*r < wMax; ii++) {
 						for(int jj = 0; jj*2*r < hMax; jj++) {
 							int dot = rng.nextInt(dots.length);
