@@ -1,4 +1,3 @@
-<!-- 
 Copyright (c) 2012, Patrick O'Leary
 All rights reserved.
 
@@ -21,33 +20,3 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- -->
- 
- <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.greentaperacing.olearyp.n4lwp"
-    android:versionCode="1"
-    android:versionName="0.1-pre">
-
-    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="15" />
-
-	<uses-feature android:name="android.software.live_wallpaper" />
-    
-    <application android:label="@string/app_name"
-        android:icon="@drawable/ic_launcher"
-        android:theme="@style/AppTheme">
-
-	    <service android:label="Crystal Reflection Live Wallpaper"
-			android:name=".N4WallpaperService"
-			android:permission="android.permission.BIND_WALLPAPER">
-	
-		<intent-filter>
-			<action android:name="android.service.wallpaper.WallpaperService" />
-		</intent-filter>
-		
-		<meta-data android:name="android.service.wallpaper"
-			android:resource="@xml/wallpaper" />
-		
-		</service>
-    </application>
-    	    
-</manifest>
