@@ -31,6 +31,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -190,7 +192,7 @@ public class N4WallpaperService extends WallpaperService {
 			
 			c.drawCircle(gridSize/2.0f, gridSize/2.0f, dotSize/2.0f, p);
 			
-			p.setColor(Color.BLACK);
+			p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 			p.setStrokeWidth(dotSize/8);
 			
 			android.graphics.Matrix R_if = new android.graphics.Matrix();
