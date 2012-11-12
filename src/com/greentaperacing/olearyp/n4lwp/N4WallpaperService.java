@@ -108,15 +108,17 @@ public class N4WallpaperService extends WallpaperService {
 			try {
 				c = holder.lockCanvas();
 				if (c != null) {
+					float[] R_wd = new float[16];
 					float[] R_dw = new float[16];
-					SensorManager.getRotationMatrixFromVector(R_dw, rotation);
+					SensorManager.getRotationMatrixFromVector(R_wd, rotation);
+					Matrix.transposeM(R_dw, 0, R_wd, 0);
 
 					// Compute vector normal to screen in world coordinates
 					final float[] n_d = {0.0f, 0.0f, 1.0f, 1.0f};
 					float[] n_w = new float[4];
 					Matrix.multiplyMV(n_w, 0, R_dw, 0, n_d, 0);
 					
-					// cos(theta) = n_w[3]
+					// cos(theta) = n_w[2]
 					double theta = Math.acos(n_w[2]);
 					
 					// Compute screen up vector in world coordinates
@@ -125,11 +127,11 @@ public class N4WallpaperService extends WallpaperService {
 					Matrix.multiplyMV(u_w, 0, R_dw, 0, u_d, 0);
 					
 					// Compute projection of world up vector onto screen, expressed in world
-					float[] proj_wu_w = {-n_w[2]*n_w[0], -n_w[2]*n_w[1], 1.0f-n_w[2]*n_w[2]};
+					float[] proj_wu_d_w = {-n_w[2]*n_w[0], -n_w[2]*n_w[1], 1.0f-n_w[2]*n_w[2], 1.0f};
 					
 					// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
-					double psi = Math.acos((u_w[0]*proj_wu_w[0] + u_w[1]*proj_wu_w[1] + u_w[2]*proj_wu_w[2])/norm(proj_wu_w));
-					
+					double psi = Math.acos((u_w[0]*proj_wu_d_w[0] + u_w[1]*proj_wu_d_w[1] + u_w[2]*proj_wu_d_w[2])/norm(proj_wu_d_w));
+
 					float illum_adj = 1.0f;
 					if(illum < illumMax) {
 						illum_adj = (illum + 100)/(illumMax + 100);
@@ -137,13 +139,13 @@ public class N4WallpaperService extends WallpaperService {
 					
 					int[] intensity = new int[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi + dotAngles[ii] + Math.PI/2)) * illum_adj + 5);
+						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi + dotAngles[ii])) * illum_adj + 5);
 					}
 					
 					c.drawColor(Color.BLACK);
 					Paint p = new Paint();
 					p.setColor(Color.WHITE);
-					p.setAntiAlias(true);
+					p.setAntiAlias(false);
 
 					int hMax = c.getHeight();
 					int wMax = c.getWidth();
