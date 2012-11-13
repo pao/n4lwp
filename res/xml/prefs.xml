@@ -22,5 +22,9 @@
         android:key="dot_fill_pct"
         android:numeric="integer"
         android:title="Dot fill amount (percent)" />
+    <CheckBoxPreference 
+        android:defaultValue="true"
+        android:key="luminance_enabled"
+        android:title="Adjust brightness based on light sensor" />
 
 </PreferenceScreen>

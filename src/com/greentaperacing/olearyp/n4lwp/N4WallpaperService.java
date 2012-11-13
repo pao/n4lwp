@@ -98,7 +98,6 @@ public class N4WallpaperService extends WallpaperService {
 				if(mLight != null) {
 					mSensorManager.registerListener(this, mLight, SensorManager.SENSOR_DELAY_NORMAL);
 				}
-				//draw();
 			} else {
 				mSensorManager.unregisterListener(this);
 			}
@@ -159,7 +158,7 @@ public class N4WallpaperService extends WallpaperService {
 					}
 
 					float illum_adj = 1.0f;
-					if(illum < illumMax) {
+					if(prefs.getBoolean("luminance_enabled", true) && illum < illumMax) {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					}
 
