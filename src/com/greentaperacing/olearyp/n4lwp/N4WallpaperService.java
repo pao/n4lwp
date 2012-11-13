@@ -132,14 +132,21 @@ public class N4WallpaperService extends WallpaperService {
 					// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
 					double psi = Math.acos((u_w[0]*proj_wu_d_w[0] + u_w[1]*proj_wu_d_w[1] + u_w[2]*proj_wu_d_w[2])/norm(proj_wu_d_w));
 
+					// We need to give psi a sign, which we can do by checking the projection in display coordinates
+					float[] proj_wu_d_d = new float[4];
+					Matrix.multiplyMV(proj_wu_d_d, 0, R_wd, 0, proj_wu_d_w, 0);
+					if(proj_wu_d_d[0] < 0) {
+						psi = -psi;
+					}
+
 					float illum_adj = 1.0f;
 					if(illum < illumMax) {
 						illum_adj = (illum + 100)/(illumMax + 100);
-					} 
+					}
 					
 					int[] intensity = new int[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi + dotAngles[ii])) * illum_adj + 5);
+						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
 					}
 					
 					c.drawColor(Color.BLACK);
