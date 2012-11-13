@@ -40,14 +40,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 			android:name=".N4WallpaperService"
 			android:permission="android.permission.BIND_WALLPAPER">
 	
-		<intent-filter>
-			<action android:name="android.service.wallpaper.WallpaperService" />
-		</intent-filter>
-		
-		<meta-data android:name="android.service.wallpaper"
-			android:resource="@xml/wallpaper" />
-		
+			<intent-filter>
+				<action android:name="android.service.wallpaper.WallpaperService" />
+			</intent-filter>
+			
+			<meta-data android:name="android.service.wallpaper"
+				android:resource="@xml/wallpaper" />
+
 		</service>
+		
+	    <activity android:label="Crystal Reflection Settings"
+	        android:name=".N4WallpaperSettings"
+            android:exported="true">
+
+   	    </activity>
+
     </application>
     	    
 </manifest>
