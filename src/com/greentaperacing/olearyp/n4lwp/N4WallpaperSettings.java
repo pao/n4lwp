@@ -74,16 +74,18 @@ public class N4WallpaperSettings extends PreferenceActivity implements OnPrefere
         }
     }
  
-/*
+
+    /* This method is hidden for now so we only get one screen
     @Override
     public void onBuildHeaders(List<Header> aTarget) {
         try {
-            mLoadHeaders.invoke(this,new Object[]{R.xml.pref_headers,aTarget});
+            mLoadHeaders.invoke(this,new Object[]{R.xml.pref_headers, aTarget});
         } catch (IllegalArgumentException e) {
         } catch (IllegalAccessException e) {
         } catch (InvocationTargetException e) {
         }  
     }
+    */
  
     @TargetApi(11)
 	static public class PrefsFragment extends PreferenceFragment {
@@ -96,7 +98,7 @@ public class N4WallpaperSettings extends PreferenceActivity implements OnPrefere
             addPreferencesFromResource(thePrefRes);
         }
     }
-*/
+
 	@Override
 	public boolean onPreferenceChange(Preference arg0, Object arg1) {
 		// TODO Auto-generated method stub

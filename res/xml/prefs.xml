@@ -6,5 +6,21 @@
         android:defaultValue="@color/white"
         android:key="color_fg"
         android:title="Dot color" />
+    <net.margaritov.preference.colorpicker.ColorPickerPreference
+        alphaSlider="true"
+        android:defaultValue="@color/black"
+        android:key="color_bg"
+        android:title="Background color" />
+
+    <EditTextPreference
+        android:defaultValue="40"
+        android:key="dot_num_across"
+        android:numeric="integer"
+        android:title="Number of dots across" />
+    <EditTextPreference
+        android:defaultValue="80"
+        android:key="dot_fill_pct"
+        android:numeric="integer"
+        android:title="Dot fill amount (percent)" />
 
 </PreferenceScreen>

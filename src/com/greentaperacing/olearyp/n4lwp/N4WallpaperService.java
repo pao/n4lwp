@@ -27,6 +27,7 @@ package com.greentaperacing.olearyp.n4lwp;
 
 import java.util.Random;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -42,7 +43,9 @@ import android.opengl.Matrix;
 import android.preference.PreferenceManager;
 import android.service.wallpaper.WallpaperService;
 import android.util.FloatMath;
+import android.view.Display;
 import android.view.SurfaceHolder;
+import android.view.WindowManager;
 
 public class N4WallpaperService extends WallpaperService {
 
@@ -95,7 +98,7 @@ public class N4WallpaperService extends WallpaperService {
 				if(mLight != null) {
 					mSensorManager.registerListener(this, mLight, SensorManager.SENSOR_DELAY_NORMAL);
 				}
-				draw();
+				//draw();
 			} else {
 				mSensorManager.unregisterListener(this);
 			}
@@ -165,20 +168,23 @@ public class N4WallpaperService extends WallpaperService {
 						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
 					}
 
-					c.drawColor(Color.BLACK);
+					c.drawColor(prefs.getInt("color_bg", Color.BLACK));
+
 					Paint p = new Paint();
-					p.setColor(Color.WHITE);
-					p.setAntiAlias(false);
 
 					int hMax = c.getHeight();
 					int wMax = c.getWidth();
-					int r = 10;
+
+					final Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
+					@SuppressWarnings("deprecation")
+					final int minScreenDim = Math.min(display.getWidth(), display.getHeight());
+					final int gridSize = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
 					rng.setSeed(0);
-					for(int ii = 0; ii*2*r < wMax; ii++) {
-						for(int jj = 0; jj*2*r < hMax; jj++) {
+					for(int ii = 0; ii*gridSize < wMax; ii++) {
+						for(int jj = 0; jj*gridSize < hMax; jj++) {
 							int dot = rng.nextInt(dots.length);
 							p.setAlpha((int) intensity[dot]);
-							c.drawBitmap(dots[dot], ii*2*r, jj*2*r, p);
+							c.drawBitmap(dots[dot], ii*gridSize, jj*gridSize, p);
 						}
 					}
 				}
@@ -210,12 +216,19 @@ public class N4WallpaperService extends WallpaperService {
 
 		private void generateDots() {
 			for(int ii = 0; ii < dotAngles.length; ii++) {
-				dots[ii] = makeDot(16, 14, dotAngles[ii]);
+				dots[ii] = makeDot(dotAngles[ii]);
 			}
 		}
 
-		private Bitmap makeDot(int gridSize, int dotSize, float angle) {
-			int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
+		private Bitmap makeDot(float angle) {
+			final int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
+
+			final Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
+			@SuppressWarnings("deprecation")
+			final int minScreenDim = Math.min(display.getWidth(), display.getHeight());
+			final int gridSize = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
+			final float dotSize = ((float) gridSize)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
+
 			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
 			Canvas c = new Canvas(b);
 			Paint p = new Paint();
@@ -232,10 +245,10 @@ public class N4WallpaperService extends WallpaperService {
 			float[] lineEnds = {
 					gridSize/2.0f, 0,
 					gridSize/2.0f, gridSize,
-					gridSize/4.0f, 0,
-					gridSize/4.0f, gridSize,
-					3.0f*gridSize/4.0f, 0,
-					3.0f*gridSize/4.0f, gridSize,
+					gridSize/2.0f-dotSize/4.0f, 0,
+					gridSize/2.0f-dotSize/4.0f, gridSize,
+					gridSize/2.0f+dotSize/4.0f, 0,
+					gridSize/2.0f+dotSize/4.0f, gridSize,
 			};
 			R_if.mapPoints(lineEnds);
 			c.drawLines(lineEnds, p);
