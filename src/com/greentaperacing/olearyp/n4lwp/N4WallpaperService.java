@@ -188,8 +188,11 @@ public class N4WallpaperService extends WallpaperService {
 					}
 				}
 			} finally {
-				if (c != null)
-					holder.unlockCanvasAndPost(c);
+				// If we get IllegalArgumentException, the Surface was destroyed and there's nothing to unlock
+				try {
+					if (c != null)
+						holder.unlockCanvasAndPost(c);
+				} catch(IllegalArgumentException e) {}
 			}
 		}
 
