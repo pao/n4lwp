@@ -164,7 +164,7 @@ public class N4WallpaperService extends WallpaperService {
 
 					int[] intensity = new int[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
+						intensity[ii] = (int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
 					}
 
 					c.drawColor(prefs.getInt("color_bg", Color.BLACK));

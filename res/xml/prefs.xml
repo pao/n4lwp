@@ -7,7 +7,7 @@
         android:key="color_fg"
         android:title="Dot color" />
     <net.margaritov.preference.colorpicker.ColorPickerPreference
-        alphaSlider="true"
+        alphaSlider="false"
         android:defaultValue="@color/black"
         android:key="color_bg"
         android:title="Background color" />
