@@ -27,6 +27,7 @@ package com.greentaperacing.olearyp.n4lwp;
 
 import java.util.Random;
 
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -38,6 +39,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.Matrix;
+import android.preference.PreferenceManager;
 import android.service.wallpaper.WallpaperService;
 import android.util.FloatMath;
 import android.view.SurfaceHolder;
@@ -57,20 +59,34 @@ public class N4WallpaperService extends WallpaperService {
 		private final float illumMax = 700f;
 		private float[] rotation = {0.0f, 0.0f, 0.0f};
 		private float illum = illumMax;
-		
+
 		private final Random rng = new Random(0);
-		
+
 		private final float[] dotAngles = new float[20];
 		private final Bitmap[] dots = new Bitmap[dotAngles.length];
-		
+
+		private SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(N4WallpaperService.this);
+
 		@Override
 		public void onCreate(SurfaceHolder surfaceHolder) {
 			super.onCreate(surfaceHolder);
 			for(int ii = 0; ii < dotAngles.length; ii++) {
 				dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
-				dots[ii] = makeDot(16, 14, dotAngles[ii]);
 			}
+			generateDots();
+			prefs.registerOnSharedPreferenceChangeListener(prefListener);
 		}
+
+
+		private SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+
+			@Override
+			public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+					String key) {
+				generateDots();
+
+			}
+		};
 
 		@Override
 		public void onVisibilityChanged(boolean visible) {
@@ -117,18 +133,18 @@ public class N4WallpaperService extends WallpaperService {
 					final float[] n_d = {0.0f, 0.0f, 1.0f, 1.0f};
 					float[] n_w = new float[4];
 					Matrix.multiplyMV(n_w, 0, R_dw, 0, n_d, 0);
-					
+
 					// cos(theta) = n_w[2]
 					double theta = Math.acos(n_w[2]);
-					
+
 					// Compute screen up vector in world coordinates
 					final float[] u_d = {0.0f, 1.0f, 0.0f, 1.0f};
 					float[] u_w = new float[4];
 					Matrix.multiplyMV(u_w, 0, R_dw, 0, u_d, 0);
-					
+
 					// Compute projection of world up vector onto screen, expressed in world
 					float[] proj_wu_d_w = {-n_w[2]*n_w[0], -n_w[2]*n_w[1], 1.0f-n_w[2]*n_w[2], 1.0f};
-					
+
 					// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
 					double psi = Math.acos((u_w[0]*proj_wu_d_w[0] + u_w[1]*proj_wu_d_w[1] + u_w[2]*proj_wu_d_w[2])/norm(proj_wu_d_w));
 
@@ -143,12 +159,12 @@ public class N4WallpaperService extends WallpaperService {
 					if(illum < illumMax) {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					}
-					
+
 					int[] intensity = new int[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
 						intensity[ii] = (int) Math.round(180*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
 					}
-					
+
 					c.drawColor(Color.BLACK);
 					Paint p = new Paint();
 					p.setColor(Color.WHITE);
@@ -187,23 +203,30 @@ public class N4WallpaperService extends WallpaperService {
 			}
 		}
 
-		public float norm(float[] vector) {
+		private float norm(float[] vector) {
 			return FloatMath.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
 					+ vector[2] * vector[2]);
 		}
 
-		public Bitmap makeDot(int gridSize, int dotSize, float angle) {
+		private void generateDots() {
+			for(int ii = 0; ii < dotAngles.length; ii++) {
+				dots[ii] = makeDot(16, 14, dotAngles[ii]);
+			}
+		}
+
+		private Bitmap makeDot(int gridSize, int dotSize, float angle) {
+			int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
 			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
 			Canvas c = new Canvas(b);
 			Paint p = new Paint();
-			p.setColor(Color.WHITE);
+			p.setColor(color_fg);
 			p.setAntiAlias(true);
-			
+
 			c.drawCircle(gridSize/2.0f, gridSize/2.0f, dotSize/2.0f, p);
-			
+
 			p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 			p.setStrokeWidth(dotSize/8);
-			
+
 			android.graphics.Matrix R_if = new android.graphics.Matrix();
 			R_if.setRotate(angle*180f/(float) Math.PI, gridSize/2.0f, gridSize/2.0f);
 			float[] lineEnds = {
@@ -216,7 +239,7 @@ public class N4WallpaperService extends WallpaperService {
 			};
 			R_if.mapPoints(lineEnds);
 			c.drawLines(lineEnds, p);
-						
+
 			return b;
 		}
 	}
