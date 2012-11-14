@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         android:icon="@drawable/ic_launcher"
         android:theme="@style/AppTheme">
 
-	    <service android:label="Crystal Reflection Live Wallpaper"
+	    <service android:label="Crystal Reflection"
 			android:name=".N4WallpaperService"
 			android:permission="android.permission.BIND_WALLPAPER">
 	
