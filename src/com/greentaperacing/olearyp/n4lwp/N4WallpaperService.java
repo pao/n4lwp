@@ -175,20 +175,18 @@ public class N4WallpaperService extends WallpaperService {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					}
 
-					int[] intensity = new int[dotAngles.length];
+					Paint[] intensity = new Paint[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = (int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5);
+						intensity[ii] = new Paint();
+						intensity[ii].setAlpha((int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5));
 					}
 
 					c.drawColor(prefs.getInt("color_bg", Color.BLACK));
 
-					Paint p = new Paint();
-
 					for(int ii = 0; ii*gridSize < surfWidth; ii++) {
 						for(int jj = 0; jj*gridSize < surfHeight; jj++) {
 							int dot = orientations[ii][jj];
-							p.setAlpha((int) intensity[dot]);
-							c.drawBitmap(dots[dot], ii*gridSize, jj*gridSize, p);
+							c.drawBitmap(dots[dot], ii*gridSize, jj*gridSize, intensity[dot]);
 						}
 					}
 				}
