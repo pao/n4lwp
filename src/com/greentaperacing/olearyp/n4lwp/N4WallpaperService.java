@@ -239,22 +239,23 @@ public class N4WallpaperService extends WallpaperService {
 
 			c.drawCircle(gridSize/2.0f, gridSize/2.0f, dotSize/2.0f, p);
 
-			p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
-			p.setStrokeWidth(dotSize/8);
+			if(prefs.getBoolean("dot_draw_lines", true)) {
+				p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+				p.setStrokeWidth(dotSize/8);
 
-			android.graphics.Matrix R_if = new android.graphics.Matrix();
-			R_if.setRotate(angle*180f/(float) Math.PI, gridSize/2.0f, gridSize/2.0f);
-			float[] lineEnds = {
-					gridSize/2.0f, 0,
-					gridSize/2.0f, gridSize,
-					gridSize/2.0f-dotSize/4.0f, 0,
-					gridSize/2.0f-dotSize/4.0f, gridSize,
-					gridSize/2.0f+dotSize/4.0f, 0,
-					gridSize/2.0f+dotSize/4.0f, gridSize,
-			};
-			R_if.mapPoints(lineEnds);
-			c.drawLines(lineEnds, p);
-
+				android.graphics.Matrix R_if = new android.graphics.Matrix();
+				R_if.setRotate(angle*180f/(float) Math.PI, gridSize/2.0f, gridSize/2.0f);
+				float[] lineEnds = {
+						gridSize/2.0f, 0,
+						gridSize/2.0f, gridSize,
+						gridSize/2.0f-dotSize/4.0f, 0,
+						gridSize/2.0f-dotSize/4.0f, gridSize,
+						gridSize/2.0f+dotSize/4.0f, 0,
+						gridSize/2.0f+dotSize/4.0f, gridSize,
+				};
+				R_if.mapPoints(lineEnds);
+				c.drawLines(lineEnds, p);
+			}
 			return b;
 		}
 	}

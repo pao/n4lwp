@@ -26,5 +26,9 @@
         android:defaultValue="true"
         android:key="luminance_enabled"
         android:title="Adjust brightness based on light sensor" />
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="dot_draw_lines"
+        android:title="Draw lines on dots" />
 
 </PreferenceScreen>
