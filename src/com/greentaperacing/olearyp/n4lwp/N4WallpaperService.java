@@ -84,6 +84,7 @@ public class N4WallpaperService extends WallpaperService {
 
 			}
 		};
+
 		private int surfWidth = 0;
 		private int surfHeight = 0;
 		private int gridSize = 0;
@@ -162,9 +163,12 @@ public class N4WallpaperService extends WallpaperService {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					}
 
+					final int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
+
 					Paint[] intensity = new Paint[dotAngles.length];
 					for(int ii = 0; ii < intensity.length; ii++) {
 						intensity[ii] = new Paint();
+						intensity[ii].setColor(color_fg);
 						intensity[ii].setAlpha((int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5));
 					}
 
@@ -226,14 +230,12 @@ public class N4WallpaperService extends WallpaperService {
 		}
 
 		private Bitmap makeDot(float angle) {
-			final int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
 
 			final float dotSize = ((float) gridSize)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
 
-			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
+			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ALPHA_8);
 			Canvas c = new Canvas(b);
 			Paint p = new Paint();
-			p.setColor(color_fg);
 			p.setAntiAlias(true);
 
 			c.drawCircle(gridSize/2.0f, gridSize/2.0f, dotSize/2.0f, p);
