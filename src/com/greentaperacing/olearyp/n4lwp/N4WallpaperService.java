@@ -27,7 +27,6 @@ package com.greentaperacing.olearyp.n4lwp;
 
 import java.util.Random;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -43,9 +42,7 @@ import android.opengl.Matrix;
 import android.preference.PreferenceManager;
 import android.service.wallpaper.WallpaperService;
 import android.util.FloatMath;
-import android.view.Display;
 import android.view.SurfaceHolder;
-import android.view.WindowManager;
 
 public class N4WallpaperService extends WallpaperService {
 
@@ -74,7 +71,6 @@ public class N4WallpaperService extends WallpaperService {
 			for(int ii = 0; ii < dotAngles.length; ii++) {
 				dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
 			}
-			generateDots();
 			prefs.registerOnSharedPreferenceChangeListener(prefListener);
 		}
 
@@ -109,16 +105,7 @@ public class N4WallpaperService extends WallpaperService {
 		public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 			surfWidth = width;
 			surfHeight = height;
-			final int minScreenDim = Math.min(width, height);
-			gridSize  = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
-			
-			final Random rng = new Random(0);
-			orientations = new int[(int) Math.ceil((double) width/gridSize)][(int) Math.ceil((double) height/gridSize)];
-			for(int ii = 0; ii*gridSize < width; ii++) {
-				for(int jj = 0; jj*gridSize < height; jj++) {
-					orientations[ii][jj] = rng.nextInt(dots.length);
-				}
-			}
+			generateDots();
 		}
 
 		@Override
@@ -222,18 +209,25 @@ public class N4WallpaperService extends WallpaperService {
 		}
 
 		private void generateDots() {
+			final int minScreenDim = Math.min(surfWidth, surfHeight);
+			gridSize  = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
+
 			for(int ii = 0; ii < dotAngles.length; ii++) {
 				dots[ii] = makeDot(dotAngles[ii]);
+			}
+
+			final Random rng = new Random(0);
+			orientations = new int[(int) Math.ceil((double) surfWidth/gridSize)][(int) Math.ceil((double) surfHeight/gridSize)];
+			for(int ii = 0; ii*gridSize < surfWidth; ii++) {
+				for(int jj = 0; jj*gridSize < surfHeight; jj++) {
+					orientations[ii][jj] = rng.nextInt(dots.length);
+				}
 			}
 		}
 
 		private Bitmap makeDot(float angle) {
 			final int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
 
-			final Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
-			@SuppressWarnings("deprecation")
-			final int minScreenDim = Math.min(display.getWidth(), display.getHeight());
-			final int gridSize = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
 			final float dotSize = ((float) gridSize)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
 
 			Bitmap b = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
