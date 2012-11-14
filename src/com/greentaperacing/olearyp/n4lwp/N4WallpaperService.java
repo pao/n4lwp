@@ -163,21 +163,24 @@ public class N4WallpaperService extends WallpaperService {
 						illum_adj = (illum + 100)/(illumMax + 100);
 					}
 
-					final int color_fg = prefs.getInt("color_fg", 0xFFFFFF);
-
-					Paint[] intensity = new Paint[dotAngles.length];
-					for(int ii = 0; ii < intensity.length; ii++) {
-						intensity[ii] = new Paint();
-						intensity[ii].setColor(color_fg);
-						intensity[ii].setAlpha((int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5));
+					Paint p = new Paint();
+					p.setColor(prefs.getInt("color_fg", 0xFFFFFF));
+					Bitmap[] preComposedDots = new Bitmap[dotAngles.length];
+					Canvas cmpCanvas = new Canvas();
+					for(int ii = 0; ii < dotAngles.length; ii++) {
+						p.setAlpha((int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5));
+						
+						preComposedDots[ii] = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
+						cmpCanvas.setBitmap(preComposedDots[ii]);
+						cmpCanvas.drawColor(prefs.getInt("color_bg", Color.BLACK));
+						cmpCanvas.drawBitmap(dots[ii], 0, 0, p);
 					}
 
-					c.drawColor(prefs.getInt("color_bg", Color.BLACK));
-
+					p = new Paint();
 					for(int ii = 0; ii*gridSize < surfWidth; ii++) {
 						for(int jj = 0; jj*gridSize < surfHeight; jj++) {
 							int dot = orientations[ii][jj];
-							c.drawBitmap(dots[dot], ii*gridSize, jj*gridSize, intensity[dot]);
+							c.drawBitmap(preComposedDots[dot], ii*gridSize, jj*gridSize, p);
 						}
 					}
 				}
