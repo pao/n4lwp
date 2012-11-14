@@ -63,8 +63,6 @@ public class N4WallpaperService extends WallpaperService {
 		private float[] rotation = {0.0f, 0.0f, 0.0f};
 		private float illum = illumMax;
 
-		private final Random rng = new Random(0);
-
 		private final float[] dotAngles = new float[20];
 		private final Bitmap[] dots = new Bitmap[dotAngles.length];
 
@@ -90,6 +88,10 @@ public class N4WallpaperService extends WallpaperService {
 
 			}
 		};
+		private int surfWidth = 0;
+		private int surfHeight = 0;
+		private int gridSize = 0;
+		private int[][] orientations = {{0}};
 
 		@Override
 		public void onVisibilityChanged(boolean visible) {
@@ -105,7 +107,18 @@ public class N4WallpaperService extends WallpaperService {
 
 		@Override
 		public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-			draw();
+			surfWidth = width;
+			surfHeight = height;
+			final int minScreenDim = Math.min(width, height);
+			gridSize  = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
+			
+			final Random rng = new Random(0);
+			orientations = new int[(int) Math.ceil((double) width/gridSize)][(int) Math.ceil((double) height/gridSize)];
+			for(int ii = 0; ii*gridSize < width; ii++) {
+				for(int jj = 0; jj*gridSize < height; jj++) {
+					orientations[ii][jj] = rng.nextInt(dots.length);
+				}
+			}
 		}
 
 		@Override
@@ -171,17 +184,9 @@ public class N4WallpaperService extends WallpaperService {
 
 					Paint p = new Paint();
 
-					int hMax = c.getHeight();
-					int wMax = c.getWidth();
-
-					final Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
-					@SuppressWarnings("deprecation")
-					final int minScreenDim = Math.min(display.getWidth(), display.getHeight());
-					final int gridSize = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
-					rng.setSeed(0);
-					for(int ii = 0; ii*gridSize < wMax; ii++) {
-						for(int jj = 0; jj*gridSize < hMax; jj++) {
-							int dot = rng.nextInt(dots.length);
+					for(int ii = 0; ii*gridSize < surfWidth; ii++) {
+						for(int jj = 0; jj*gridSize < surfHeight; jj++) {
+							int dot = orientations[ii][jj];
 							p.setAlpha((int) intensity[dot]);
 							c.drawBitmap(dots[dot], ii*gridSize, jj*gridSize, p);
 						}
@@ -205,7 +210,9 @@ public class N4WallpaperService extends WallpaperService {
 		public void onSensorChanged(SensorEvent event) {
 			if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
 				rotation  = event.values;
-				draw();
+				if(surfWidth > 0) {
+					draw();
+				}
 			} else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
 				illum = event.values[0];
 			}
