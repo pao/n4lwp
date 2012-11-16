@@ -33,6 +33,7 @@ import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
+import org.andengine.entity.sprite.Sprite;
 import org.andengine.extension.ui.livewallpaper.BaseLiveWallpaperService;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -50,10 +51,10 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.preference.PreferenceManager;
 import android.util.FloatMath;
-import android.view.SurfaceHolder;
 
 public class N4WallpaperService extends BaseLiveWallpaperService implements SensorEventListener {
 
@@ -66,7 +67,7 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	private float illum = illumMax;
 
 	private final float[] dotAngles = new float[20];
-	private final Bitmap[] dots = new Bitmap[dotAngles.length];
+	private Bitmap dotImg = null;
 
 	private SharedPreferences prefs = null;
 
@@ -76,6 +77,7 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	private TextureRegion dotRegion;
 	protected boolean settings_changed;
 	private Scene scene;
+	private Sprite[] dotGrid;
 
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -87,13 +89,15 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 			OnCreateResourcesCallback pOnCreateResourcesCallback)
 			throws Exception {
 		
+		for(int ii = 0; ii < dotAngles.length; ii++) {
+			dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
+		}
 		
 		prefs = PreferenceManager.getDefaultSharedPreferences(N4WallpaperService.this);
-		//android.os.Debug.waitForDebugger();
-		generateDots();
+		dotImg = makeDot(0);
 		
 		texAtlas = new BitmapTextureAtlas(getTextureManager(), cellSize, cellSize, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-		BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dots[0]);
+		BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
 		texAtlas.addTextureAtlasSource(source, 0, 0);
 		texAtlas.load();
 		dotRegion = (TextureRegion) TextureRegionFactory.createFromSource(texAtlas, source, 0, 0);
@@ -105,8 +109,7 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	public void onCreateScene(OnCreateSceneCallback pOnCreateSceneCallback)
 			throws Exception {
 		scene = new Scene();
-		int color_bg = prefs.getInt("color_bg", Color.BLACK);
-		scene.setBackground(new Background(Color.red(color_bg)/255f, Color.green(color_bg)/255f, Color.blue(color_bg)/255f));
+		scene.setBackground(new Background(colorFromInt(prefs.getInt("color_bg", Color.BLACK))));
 		pOnCreateSceneCallback.onCreateSceneFinished(scene);
 	}
 
@@ -124,7 +127,16 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		}
 
 		prefs.registerOnSharedPreferenceChangeListener(prefListener);
+		
+		dotGrid = new Sprite[1];
+		dotGrid[0] = new Sprite(300, 300, dotRegion, getVertexBufferObjectManager());
+		scene.attachChild(dotGrid[0]);
+		dotGrid[0].setBlendingEnabled(true);
+		dotGrid[0].setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		dotGrid[0].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
+		dotGrid[0].setAlpha(0);
 
+		
 		pOnPopulateSceneCallback.onPopulateSceneFinished();
 	}
 
@@ -134,20 +146,18 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		super.onDestroy();
 	}
 
-	public void onCreate(SurfaceHolder surfaceHolder) {
-		for(int ii = 0; ii < dotAngles.length; ii++) {
-			dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
-		}
-	}
-
 
 	private SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
 
 		@Override
 		public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
 				String key) {
-			int color_bg = prefs.getInt("color_bg", Color.BLACK);
-			scene.setBackground(new Background(Color.red(color_bg)/255f, Color.green(color_bg)/255f, Color.blue(color_bg)/255f));
+			scene.getBackground().setColor(colorFromInt(prefs.getInt("color_bg", Color.BLACK)));
+			dotImg = makeDot(0);
+			BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
+			texAtlas.addTextureAtlasSource(source, 0, 0);
+			texAtlas.load();
+			dotGrid[0].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
 		}
 	};
 
@@ -157,37 +167,6 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	private int[][] orientations = {{0}};
 	private final int cellSize = 64;
 
-	/*
-	@Override
-	public void onVisibilityChanged(boolean visible) {
-		if (visible) {
-			mSensorManager.registerListener(this, mRotation, SensorManager.SENSOR_DELAY_NORMAL);
-			if(mLight != null) {
-				mSensorManager.registerListener(this, mLight, SensorManager.SENSOR_DELAY_NORMAL);
-			}
-		} else {
-			mSensorManager.unregisterListener(this);
-		}
-	}
-
-	@Override
-	public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-		surfWidth = width;
-		surfHeight = height;
-		generateDots();
-	}
-
-	@Override
-	public void onSurfaceDestroyed(SurfaceHolder holder) {
-		super.onSurfaceDestroyed(holder);
-	}
-
-	@Override
-	public void onDestroy() {
-		super.onDestroy();
-		mSensorManager.unregisterListener(this);
-	}
-*/
 	private void draw() {
 				float[] R_wd = new float[16];
 				float[] R_dw = new float[16];
@@ -225,20 +204,9 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 					illum_adj = (illum + 100)/(illumMax + 100);
 				}
 
-				Paint p = new Paint();
-				p.setColor(prefs.getInt("color_fg", 0xFFFFFF));
-				Bitmap[] preComposedDots = new Bitmap[dotAngles.length];
-				Canvas cmpCanvas = new Canvas();
-				for(int ii = 0; ii < dotAngles.length; ii++) {
-					p.setAlpha((int) Math.round(250*Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[ii])) * illum_adj + 5));
-
-					preComposedDots[ii] = Bitmap.createBitmap(gridSize, gridSize, Bitmap.Config.ARGB_8888);
-					cmpCanvas.setBitmap(preComposedDots[ii]);
-					cmpCanvas.drawColor(prefs.getInt("color_bg", Color.BLACK));
-					cmpCanvas.drawBitmap(dots[ii], 0, 0, p);
-				}
-
+				dotGrid[0].setAlpha((float) (Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[0])) * illum_adj));
 	}
+	
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -249,42 +217,42 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	public void onSensorChanged(SensorEvent event) {
 		if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
 			rotation  = event.values;
-			if(surfWidth > 0) {
-				draw();
-			}
 		} else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
 			illum = event.values[0];
+		}
+		if(isGameRunning()) {
+			draw();
 		}
 	}
 
 	private float norm(float[] vector) {
-		return FloatMath.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
+		return (float) Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
 				+ vector[2] * vector[2]);
 	}
 
-	private void generateDots() {
+	/*
+	private void generatePattern() {
 		final int minScreenDim = Math.min(surfWidth, surfHeight);
 		gridSize  = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
-
-		for(int ii = 0; ii < dotAngles.length; ii++) {
-			dots[ii] = makeDot(dotAngles[ii]);
-		}
 
 		final Random rng = new Random(0);
 		orientations = new int[(int) Math.ceil((double) surfWidth/gridSize)][(int) Math.ceil((double) surfHeight/gridSize)];
 		for(int ii = 0; ii*gridSize < surfWidth; ii++) {
 			for(int jj = 0; jj*gridSize < surfHeight; jj++) {
-				orientations[ii][jj] = rng.nextInt(dots.length);
+				orientations[ii][jj] = rng.nextInt(dotImg.length);
 			}
 		}
 	}
+	*/
 
 	private Bitmap makeDot(float angle) {
 		final float dotSize = ((float) cellSize)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
+		//android.os.Debug.waitForDebugger();
 
-		Bitmap b = Bitmap.createBitmap(cellSize, cellSize, Bitmap.Config.ALPHA_8);
+		Bitmap b = Bitmap.createBitmap(cellSize, cellSize, Bitmap.Config.ARGB_8888);
 		Canvas c = new Canvas(b);
 		Paint p = new Paint();
+		p.setColor(Color.WHITE);
 		p.setAntiAlias(true);
 
 		c.drawCircle(cellSize/2.0f, cellSize/2.0f, dotSize/2.0f, p);
@@ -309,4 +277,7 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		return b;
 	}
 
+	private org.andengine.util.color.Color colorFromInt(int color) {
+		return new org.andengine.util.color.Color(Color.red(color)/255f, Color.green(color)/255f, Color.blue(color)/255f);
+	}
 }
