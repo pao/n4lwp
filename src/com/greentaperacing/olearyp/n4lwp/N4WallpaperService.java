@@ -34,6 +34,7 @@ import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.sprite.batch.SpriteBatch;
 import org.andengine.extension.ui.livewallpaper.BaseLiveWallpaperService;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -54,7 +55,6 @@ import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.preference.PreferenceManager;
-import android.util.FloatMath;
 
 public class N4WallpaperService extends BaseLiveWallpaperService implements SensorEventListener {
 
@@ -71,13 +71,15 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 
 	private SharedPreferences prefs = null;
 
-	private int CAMERA_WIDTH = 480;
-	private int CAMERA_HEIGHT = 720;
+	private final int CAMERA_WIDTH = 480;
+	private final int CAMERA_HEIGHT = 720;
+	private final int CELL_SIZE = 64;
+
 	private BitmapTextureAtlas texAtlas;
 	private TextureRegion dotRegion;
 	protected boolean settings_changed;
 	private Scene scene;
-	private Sprite[] dotGrid;
+	private SpriteBatch[] dotBatches;
 
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -96,7 +98,7 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		prefs = PreferenceManager.getDefaultSharedPreferences(N4WallpaperService.this);
 		dotImg = makeDot(0);
 		
-		texAtlas = new BitmapTextureAtlas(getTextureManager(), cellSize, cellSize, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		texAtlas = new BitmapTextureAtlas(getTextureManager(), CELL_SIZE, CELL_SIZE, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
 		BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
 		texAtlas.addTextureAtlasSource(source, 0, 0);
 		texAtlas.load();
@@ -128,14 +130,30 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 
 		prefs.registerOnSharedPreferenceChangeListener(prefListener);
 		
-		dotGrid = new Sprite[1];
-		dotGrid[0] = new Sprite(300, 300, dotRegion, getVertexBufferObjectManager());
-		scene.attachChild(dotGrid[0]);
-		dotGrid[0].setBlendingEnabled(true);
-		dotGrid[0].setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		dotGrid[0].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
-		dotGrid[0].setAlpha(0);
+		org.andengine.util.color.Color color_fg = colorFromInt(prefs.getInt("color_fg", Color.WHITE));
+		
+		dotBatches = new SpriteBatch[dotAngles.length];
+		for(int ii = 0; ii < dotBatches.length; ii++) {
+			dotBatches[ii] = new SpriteBatch(texAtlas, 500, getVertexBufferObjectManager());
+			dotBatches[ii].setBlendingEnabled(true);
+			dotBatches[ii].setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+			dotBatches[ii].setColor(color_fg);
+		}
+		
+		int minScreenDim = Math.min(CAMERA_WIDTH, CAMERA_HEIGHT);
+		float gridSize  = ((float) minScreenDim)/Float.valueOf(prefs.getString("dot_num_across", "40"));
+		final Random rng = new Random(0);
+		for(int ii = 0; ii*gridSize < CAMERA_WIDTH; ii++) {
+			for(int jj = 0; jj*gridSize < CAMERA_HEIGHT; jj++) {
+				int orientation = rng.nextInt(dotAngles.length);
+				dotBatches[orientation].draw(dotRegion, ii*gridSize, jj*gridSize, gridSize, gridSize, dotAngles[orientation]*180/((float) Math.PI), color_fg.getRed(), color_fg.getGreen(), color_fg.getBlue(), 1);
+			}
+		}
 
+		for(int ii = 0; ii < dotBatches.length; ii++) {
+			dotBatches[ii].submit();
+			scene.attachChild(dotBatches[ii]);
+		}		
 		
 		pOnPopulateSceneCallback.onPopulateSceneFinished();
 	}
@@ -145,7 +163,6 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		mSensorManager.unregisterListener(this);
 		super.onDestroy();
 	}
-
 
 	private SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
 
@@ -157,15 +174,11 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 			BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
 			texAtlas.addTextureAtlasSource(source, 0, 0);
 			texAtlas.load();
-			dotGrid[0].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
+			for(int ii = 0; ii < dotBatches.length; ii++) {
+				dotBatches[ii].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
+			}
 		}
 	};
-
-	private int surfWidth = 0;
-	private int surfHeight = 0;
-	private int gridSize = 0;
-	private int[][] orientations = {{0}};
-	private final int cellSize = 64;
 
 	private void draw() {
 				float[] R_wd = new float[16];
@@ -204,7 +217,9 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 					illum_adj = (illum + 100)/(illumMax + 100);
 				}
 
-				dotGrid[0].setAlpha((float) (Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[0])) * illum_adj));
+				for(int ii = 0; ii < dotBatches.length; ii++) {
+					dotBatches[ii].setAlpha((float) (Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[0])) * illum_adj));
+				}
 	}
 	
 
@@ -225,56 +240,40 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		}
 	}
 
-	private float norm(float[] vector) {
-		return (float) Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
-				+ vector[2] * vector[2]);
-	}
-
-	/*
-	private void generatePattern() {
-		final int minScreenDim = Math.min(surfWidth, surfHeight);
-		gridSize  = minScreenDim/Integer.valueOf(prefs.getString("dot_num_across", "40"));
-
-		final Random rng = new Random(0);
-		orientations = new int[(int) Math.ceil((double) surfWidth/gridSize)][(int) Math.ceil((double) surfHeight/gridSize)];
-		for(int ii = 0; ii*gridSize < surfWidth; ii++) {
-			for(int jj = 0; jj*gridSize < surfHeight; jj++) {
-				orientations[ii][jj] = rng.nextInt(dotImg.length);
-			}
-		}
-	}
-	*/
-
 	private Bitmap makeDot(float angle) {
-		final float dotSize = ((float) cellSize)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
-		//android.os.Debug.waitForDebugger();
+		final float dotSize = ((float) CELL_SIZE)*(Float.valueOf(prefs.getString("dot_fill_pct", "80")))/100.0f;
 
-		Bitmap b = Bitmap.createBitmap(cellSize, cellSize, Bitmap.Config.ARGB_8888);
+		Bitmap b = Bitmap.createBitmap(CELL_SIZE, CELL_SIZE, Bitmap.Config.ARGB_8888);
 		Canvas c = new Canvas(b);
 		Paint p = new Paint();
 		p.setColor(Color.WHITE);
 		p.setAntiAlias(true);
 
-		c.drawCircle(cellSize/2.0f, cellSize/2.0f, dotSize/2.0f, p);
+		c.drawCircle(CELL_SIZE/2.0f, CELL_SIZE/2.0f, dotSize/2.0f, p);
 
 		if(prefs.getBoolean("dot_draw_lines", true)) {
 			p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 			p.setStrokeWidth(dotSize/8);
 
 			android.graphics.Matrix R_if = new android.graphics.Matrix();
-			R_if.setRotate(angle*180f/(float) Math.PI, cellSize/2.0f, cellSize/2.0f);
+			R_if.setRotate(angle*180f/(float) Math.PI, CELL_SIZE/2.0f, CELL_SIZE/2.0f);
 			float[] lineEnds = {
-					cellSize/2.0f, 0,
-					cellSize/2.0f, cellSize,
-					cellSize/2.0f-dotSize/4.0f, 0,
-					cellSize/2.0f-dotSize/4.0f, cellSize,
-					cellSize/2.0f+dotSize/4.0f, 0,
-					cellSize/2.0f+dotSize/4.0f, cellSize,
+					CELL_SIZE/2.0f, 0,
+					CELL_SIZE/2.0f, CELL_SIZE,
+					CELL_SIZE/2.0f-dotSize/4.0f, 0,
+					CELL_SIZE/2.0f-dotSize/4.0f, CELL_SIZE,
+					CELL_SIZE/2.0f+dotSize/4.0f, 0,
+					CELL_SIZE/2.0f+dotSize/4.0f, CELL_SIZE,
 			};
 			R_if.mapPoints(lineEnds);
 			c.drawLines(lineEnds, p);
 		}
 		return b;
+	}
+
+	private float norm(float[] vector) {
+		return (float) Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]
+				+ vector[2] * vector[2]);
 	}
 
 	private org.andengine.util.color.Color colorFromInt(int color) {
