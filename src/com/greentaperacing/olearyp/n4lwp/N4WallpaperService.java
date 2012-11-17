@@ -28,13 +28,15 @@ package com.greentaperacing.olearyp.n4lwp;
 import java.util.Random;
 
 import org.andengine.engine.camera.Camera;
+import org.andengine.engine.handler.timer.ITimerCallback;
+import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.sprite.Sprite;
-import org.andengine.entity.sprite.batch.SpriteBatch;
+import org.andengine.entity.sprite.batch.SpriteGroup;
 import org.andengine.extension.ui.livewallpaper.BaseLiveWallpaperService;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -79,7 +81,8 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	private TextureRegion dotRegion;
 	protected boolean settings_changed;
 	private Scene scene;
-	private SpriteBatch[] dotBatches;
+	private SpriteGroup[] dotBatches;
+	private Sprite[][] dotGrid;
 
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -89,21 +92,21 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	@Override
 	public void onCreateResources(
 			OnCreateResourcesCallback pOnCreateResourcesCallback)
-			throws Exception {
-		
+					throws Exception {
+
 		for(int ii = 0; ii < dotAngles.length; ii++) {
 			dotAngles[ii] = (float) (ii * Math.PI / dotAngles.length);
 		}
-		
+
 		prefs = PreferenceManager.getDefaultSharedPreferences(N4WallpaperService.this);
 		dotImg = makeDot(0);
-		
+
 		texAtlas = new BitmapTextureAtlas(getTextureManager(), CELL_SIZE, CELL_SIZE, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
 		BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
 		texAtlas.addTextureAtlasSource(source, 0, 0);
 		texAtlas.load();
 		dotRegion = (TextureRegion) TextureRegionFactory.createFromSource(texAtlas, source, 0, 0);
-		
+
 		pOnCreateResourcesCallback.onCreateResourcesFinished();
 	}
 
@@ -129,33 +132,45 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 		}
 
 		prefs.registerOnSharedPreferenceChangeListener(prefListener);
+
+		dotSetup();
 		
+		pOnPopulateSceneCallback.onPopulateSceneFinished();
+	}
+
+	private void dotSetup() {
 		org.andengine.util.color.Color color_fg = colorFromInt(prefs.getInt("color_fg", Color.WHITE));
-		
-		dotBatches = new SpriteBatch[dotAngles.length];
+
+		dotBatches = new SpriteGroup[dotAngles.length];
 		for(int ii = 0; ii < dotBatches.length; ii++) {
-			dotBatches[ii] = new SpriteBatch(texAtlas, 500, getVertexBufferObjectManager());
+			dotBatches[ii] = new SpriteGroup(texAtlas, 500, getVertexBufferObjectManager());
 			dotBatches[ii].setBlendingEnabled(true);
 			dotBatches[ii].setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 			dotBatches[ii].setColor(color_fg);
 		}
-		
+
 		int minScreenDim = Math.min(CAMERA_WIDTH, CAMERA_HEIGHT);
 		float gridSize  = ((float) minScreenDim)/Float.valueOf(prefs.getString("dot_num_across", "40"));
 		final Random rng = new Random(0);
+		dotGrid = new Sprite[(int) Math.ceil(CAMERA_WIDTH/gridSize)][(int) Math.ceil(CAMERA_HEIGHT/gridSize)];
 		for(int ii = 0; ii*gridSize < CAMERA_WIDTH; ii++) {
 			for(int jj = 0; jj*gridSize < CAMERA_HEIGHT; jj++) {
 				int orientation = rng.nextInt(dotAngles.length);
-				dotBatches[orientation].draw(dotRegion, ii*gridSize, jj*gridSize, gridSize, gridSize, dotAngles[orientation]*180/((float) Math.PI), color_fg.getRed(), color_fg.getGreen(), color_fg.getBlue(), 1);
+				dotGrid[ii][jj] = new Sprite(ii*gridSize, jj*gridSize, gridSize, gridSize, dotRegion, getVertexBufferObjectManager());
+				dotGrid[ii][jj].setRotation(dotAngles[orientation]*180/(float) Math.PI);
+				dotGrid[ii][jj].setColor(color_fg);
+				dotGrid[ii][jj].setUserData(Integer.valueOf(orientation));
+//				dotGrid[ii][jj].setBlendingEnabled(true);
+//				dotGrid[ii][jj].setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+//				scene.attachChild(dotGrid[ii][jj]);
+				dotBatches[orientation].attachChild(dotGrid[ii][jj]);
 			}
 		}
 
 		for(int ii = 0; ii < dotBatches.length; ii++) {
-			dotBatches[ii].submit();
 			scene.attachChild(dotBatches[ii]);
 		}		
-		
-		pOnPopulateSceneCallback.onPopulateSceneFinished();
+
 	}
 
 	@Override
@@ -174,54 +189,57 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 			BitmapTextureAtlasSource source = new BitmapTextureAtlasSource(dotImg);
 			texAtlas.addTextureAtlasSource(source, 0, 0);
 			texAtlas.load();
-			for(int ii = 0; ii < dotBatches.length; ii++) {
-				dotBatches[ii].setColor(colorFromInt(prefs.getInt("color_fg", Color.WHITE)));
-			}
+			scene.detachChildren();
+			scene.clearEntityModifiers();
+			scene.clearTouchAreas();
+			scene.clearUpdateHandlers();
+			dotSetup();
 		}
 	};
 
 	private void draw() {
-				float[] R_wd = new float[16];
-				float[] R_dw = new float[16];
-				SensorManager.getRotationMatrixFromVector(R_wd, rotation);
-				Matrix.transposeM(R_dw, 0, R_wd, 0);
+		float[] R_wd = new float[16];
+		float[] R_dw = new float[16];
+		SensorManager.getRotationMatrixFromVector(R_wd, rotation);
+		Matrix.transposeM(R_dw, 0, R_wd, 0);
 
-				// Compute vector normal to screen in world coordinates
-				final float[] n_d = {0.0f, 0.0f, 1.0f, 1.0f};
-				float[] n_w = new float[4];
-				Matrix.multiplyMV(n_w, 0, R_dw, 0, n_d, 0);
+		// Compute vector normal to screen in world coordinates
+		final float[] n_d = {0.0f, 0.0f, 1.0f, 1.0f};
+		float[] n_w = new float[4];
+		Matrix.multiplyMV(n_w, 0, R_dw, 0, n_d, 0);
 
-				// cos(theta) = n_w[2]
-				double theta = Math.acos(n_w[2]);
+		// cos(theta) = n_w[2]
+		double theta = Math.acos(n_w[2]);
 
-				// Compute screen up vector in world coordinates
-				final float[] u_d = {0.0f, 1.0f, 0.0f, 1.0f};
-				float[] u_w = new float[4];
-				Matrix.multiplyMV(u_w, 0, R_dw, 0, u_d, 0);
+		// Compute screen up vector in world coordinates
+		final float[] u_d = {0.0f, 1.0f, 0.0f, 1.0f};
+		float[] u_w = new float[4];
+		Matrix.multiplyMV(u_w, 0, R_dw, 0, u_d, 0);
 
-				// Compute projection of world up vector onto screen, expressed in world
-				float[] proj_wu_d_w = {-n_w[2]*n_w[0], -n_w[2]*n_w[1], 1.0f-n_w[2]*n_w[2], 1.0f};
+		// Compute projection of world up vector onto screen, expressed in world
+		float[] proj_wu_d_w = {-n_w[2]*n_w[0], -n_w[2]*n_w[1], 1.0f-n_w[2]*n_w[2], 1.0f};
 
-				// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
-				double psi = Math.acos((u_w[0]*proj_wu_d_w[0] + u_w[1]*proj_wu_d_w[1] + u_w[2]*proj_wu_d_w[2])/norm(proj_wu_d_w));
+		// cos(psi) = dot(u_w, proj_wu_w)/norm(proj_wu_w)
+		double psi = Math.acos((u_w[0]*proj_wu_d_w[0] + u_w[1]*proj_wu_d_w[1] + u_w[2]*proj_wu_d_w[2])/norm(proj_wu_d_w));
 
-				// We need to give psi a sign, which we can do by checking the projection in display coordinates
-				float[] proj_wu_d_d = new float[4];
-				Matrix.multiplyMV(proj_wu_d_d, 0, R_wd, 0, proj_wu_d_w, 0);
-				if(proj_wu_d_d[0] < 0) {
-					psi = -psi;
-				}
+		// We need to give psi a sign, which we can do by checking the projection in display coordinates
+		float[] proj_wu_d_d = new float[4];
+		Matrix.multiplyMV(proj_wu_d_d, 0, R_wd, 0, proj_wu_d_w, 0);
+		if(proj_wu_d_d[0] < 0) {
+			psi = -psi;
+		}
 
-				float illum_adj = 1.0f;
-				if(prefs.getBoolean("luminance_enabled", true) && illum < illumMax) {
-					illum_adj = (illum + 100)/(illumMax + 100);
-				}
+		float illum_adj = 1.0f;
+		if(prefs.getBoolean("luminance_enabled", true) && illum < illumMax) {
+			illum_adj = (illum + 100)/(illumMax + 100);
+		}
 
-				for(int ii = 0; ii < dotBatches.length; ii++) {
-					dotBatches[ii].setAlpha((float) (Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[0])) * illum_adj));
-				}
+		for(int ii = 0; ii < dotGrid.length; ii++) {
+			for(int jj = 0; jj < dotGrid[ii].length; jj++) {
+				dotGrid[ii][jj].setAlpha((float) (Math.abs(Math.sin(theta*2.0) * Math.sin(psi - dotAngles[(Integer) dotGrid[ii][jj].getUserData()])) * illum_adj));
+			}
+		}
 	}
-	
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -279,4 +297,5 @@ public class N4WallpaperService extends BaseLiveWallpaperService implements Sens
 	private org.andengine.util.color.Color colorFromInt(int color) {
 		return new org.andengine.util.color.Color(Color.red(color)/255f, Color.green(color)/255f, Color.blue(color)/255f);
 	}
+
 }
